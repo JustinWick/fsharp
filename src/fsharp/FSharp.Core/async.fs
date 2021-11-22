@@ -1355,6 +1355,14 @@ namespace Microsoft.FSharp.Control
                 let newCtxt = ctxt.WithContinuations(cont = (fun res -> ctxt.cont (Choice1Of2 res)),
                                                      econt = (fun edi -> ctxt.cont (Choice2Of2 (edi.GetAssociatedSourceException()))))
                 computation.Invoke newCtxt)
+            
+        static member CatchOrCancelled (computation: Async<'T>, compensation: OperationCanceledException->'U) =
+            MakeAsync (fun ctxt ->
+                // Turn the success or exception into data
+                let newCtxt = ctxt.WithContinuations(cont = (fun res -> ctxt.cont (Choice1Of3 res)),
+                                                     econt = (fun edi -> ctxt.cont (Choice2Of3 (edi.GetAssociatedSourceException()))),
+                                                     ccont = (fun oce -> ctxt.cont (Choice3Of3 (compensation oce))))
+                computation.Invoke newCtxt)
 
         static member RunSynchronously (computation: Async<'T>, ?timeout, ?cancellationToken:CancellationToken) =
             let timeout, cancellationToken =
